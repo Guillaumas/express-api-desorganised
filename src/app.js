@@ -1,6 +1,6 @@
 import express from 'express';
 import productRoutes from './routes/productRoutes.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { errorHandler } from './interceptors/errorHandler.js';
 
 const app = express();
 
