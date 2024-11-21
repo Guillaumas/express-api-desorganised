@@ -1,40 +1,49 @@
+import { ProductRepository } from '../repositories/productRepository.js';
+import { ProductDto } from '../dto/productDto.js';
 
-import db from '../config/database.js';
+class ProductService {
+    constructor() {
+        this.repository = new ProductRepository();
+        this.MINIMAL_NAME_LENGTH = 5;
+        this.MINIMAL_PRICE = 4;
+    }
 
-export const getAllProducts = () => {
-    return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM products', (err, rows) => {
-            if (err) reject(err);
-            resolve(rows);
-        });
-    });
-};
+    async getAllProducts() {
+        const products = await this.repository.findAll();
+        return products.map(product => ProductDto.fromEntity(product));
+    }
 
-export const createProduct = (name, price) => {
-    return new Promise((resolve, reject) => {
-        const sql = 'INSERT INTO products(name, price) VALUES (?, ?)';
-        db.run(sql, [name, price], function(err) {
-            if (err) reject(err);
-            resolve({ id: this.lastID, name, price });
-        });
-    });
-};
+    async createProduct(productData) {
+        this.validateProduct(productData);
+        const product = await this.repository.create(productData);
+        return ProductDto.fromEntity(product);
+    }
 
-export const updateProduct = (id, name, price) => {
-    return new Promise((resolve, reject) => {
-        const sql = 'UPDATE products SET name = ?, price = ? WHERE id = ?';
-        db.run(sql, [name, price, id], function(err) {
-            if (err) reject(err);
-            resolve({ changes: this.changes, id, name, price });
-        });
-    });
-};
+    async updateProduct(id, productData) {
+        this.validateProduct(productData);
+        const result = await this.repository.update(id, productData);
+        if (result.changes === 0) {
+            throw new Error('Product not found');
+        }
+        return result;
+    }
 
-export const deleteProduct = (id) => {
-    return new Promise((resolve, reject) => {
-        db.run('DELETE FROM products WHERE id = ?', [id], function(err) {
-            if (err) reject(err);
-            resolve({ changes: this.changes });
-        });
-    });
-};
+    async deleteProduct(id) {
+        return await this.repository.delete(id);
+    }
+
+    validateProduct(data) {
+        const { name, price } = data;
+        if (!name || !price) {
+            throw new Error('Name and price are required');
+        }
+        if (name.length < this.MINIMAL_NAME_LENGTH) {
+            throw new Error('Name length must be higher than 5 characters');
+        }
+        if (price < this.MINIMAL_PRICE) {
+            throw new Error('Minimal product price is 4 euros');
+        }
+    }
+}
+
+export default new ProductService();

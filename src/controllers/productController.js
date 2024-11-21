@@ -1,4 +1,4 @@
-import * as productService from '../services/productService.js';
+import productService from '../services/productService.js';
 import { asyncHandler } from '../interceptors/asyncHandler.js';
 
 export const getAllProducts = asyncHandler(async (req, res) => {
@@ -7,26 +7,31 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 });
 
 export const createProduct = asyncHandler(async (req, res) => {
-    const { name, price } = req.body;
-    const product = await productService.createProduct(name, price);
-    res.status(201).send(product);
+    try {
+        const product = await productService.createProduct(req.body);
+        res.status(201).send(product);
+    } catch (error) {
+        res.status(400).send(error.message);
+    }
 });
 
 export const updateProduct = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { name, price } = req.body;
-    const result = await productService.updateProduct(id, name, price);
-    
-    if (result.changes === 0) {
-        return res.status(404).send('Product not found');
+    try {
+        const result = await productService.updateProduct(id, req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        if (error.message === 'Product not found') {
+            res.status(404).send(error.message);
+        } else {
+            res.status(400).send(error.message);
+        }
     }
-    res.status(200).send(result);
 });
 
 export const deleteProduct = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const result = await productService.deleteProduct(id);
-    
     if (result.changes === 0) {
         return res.status(404).send('Product not found');
     }
