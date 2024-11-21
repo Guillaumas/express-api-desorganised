@@ -1,46 +1,34 @@
-import db from '../config/database.js';
+import * as productService from '../services/productService.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 
-export const getAllProducts = (req, res, next) => {
-    db.all('SELECT * FROM products', (err, rows) => {
-        if (err) return next(err);
-        res.send(rows);
-    });
-};
+export const getAllProducts = asyncHandler(async (req, res) => {
+    const products = await productService.getAllProducts();
+    res.send(products);
+});
 
-export const createProduct = (req, res, next) => {
+export const createProduct = asyncHandler(async (req, res) => {
     const { name, price } = req.body;
-    if (!name || !price) {
-        return res.status(400).send('Name and price are required');
-    }
+    const product = await productService.createProduct(name, price);
+    res.status(201).send(product);
+});
 
-    const sql = 'INSERT INTO products(name, price) VALUES (?, ?)';
-    db.run(sql, [name, price], function(err) {
-        if (err) return next(err);
-        res.status(201).send({ id: this.lastID, name, price });
-    });
-};
-
-export const updateProduct = (req, res, next) => {
+export const updateProduct = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { name, price } = req.body;
+    const result = await productService.updateProduct(id, name, price);
     
-    if (!name || !price) {
-        return res.status(400).send('Name and price are required');
+    if (result.changes === 0) {
+        return res.status(404).send('Product not found');
     }
+    res.status(200).send(result);
+});
 
-    const sql = 'UPDATE products SET name = ?, price = ? WHERE id = ?';
-    db.run(sql, [name, price, id], function(err) {
-        if (err) return next(err);
-        if (this.changes === 0) return res.status(404).send('Product not found');
-        res.status(200).send({ id, name, price });
-    });
-};
-
-export const deleteProduct = (req, res, next) => {
+export const deleteProduct = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    db.run('DELETE FROM products WHERE id = ?', [id], function(err) {
-        if (err) return next(err);
-        if (this.changes === 0) return res.status(404).send('Product not found');
-        res.status(204).send();
-    });
-};
+    const result = await productService.deleteProduct(id);
+    
+    if (result.changes === 0) {
+        return res.status(404).send('Product not found');
+    }
+    res.status(204).send();
+});
